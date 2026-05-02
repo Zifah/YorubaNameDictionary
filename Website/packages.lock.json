@@ -228,8 +228,8 @@
       },
       "YorubaOrganization.Core": {
         "type": "Transitive",
-        "resolved": "6.0.3",
-        "contentHash": "mPB9Hqv87F2wvk/aHPjwNmEYg+AGPyQZto2VhhSkJdho6TuhXkWtpMPfl92txLLJu2/NQET22c05A2byttyQLg==",
+        "resolved": "6.0.4",
+        "contentHash": "tKJvdIuorsbtpEO2g+JjbIUVBfqTKSYjfzbkq7NnmpMOp2T8rSBAtEY1p/f7nvO7LBRSswxYRpHrflC5OOWn/g==",
         "dependencies": {
           "MediatR.Contracts": "2.0.1"
         }
