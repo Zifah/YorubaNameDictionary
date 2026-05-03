@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Options;
 using System.Text.Json;
 using Application.Services.MultiLanguage;
+using Words.Core.Dto.Request;
 using Words.Core.Dto.Response;
 using Words.Website.Config;
 using YorubaOrganization.Core.Dto.Response;
@@ -76,6 +77,26 @@ namespace Words.Website.Services
         public Task<RecentStats?> GetRecentStats()
         {
             return GetApiResponse<RecentStats>("/words/search/activity/all");
+        }
+
+        public Task<GeoLocationDto[]?> GetGeoLocations()
+        {
+            return GetApiResponse<GeoLocationDto[]>("/geolocations");
+        }
+
+        public async Task SuggestWordAsync(CreateWordDto dto)
+        {
+            var url = $"{_apiSettings.BaseUrl}/words/suggestions";
+            var request = new HttpRequestMessage(HttpMethod.Post, url);
+            request.Headers.Add("X-Tenant", _languageService.CurrentTenant);
+            request.Content = JsonContent.Create(dto, options: _jsonSerializerOptions);
+            var response = await _httpClient.SendAsync(request);
+            var rawContent = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("POST '{Url}' failed with '{Status}'; Response: '{Content}'", url, response.StatusCode, rawContent);
+                throw new Exception("Error submitting word suggestion.");
+            }
         }
     }
 }
