@@ -158,12 +158,20 @@
 
                 <div id="dictionary-entry-1">
 
-                    <div class="row vg-header">
+                    <div class="row vg-header align-items-center">
 
                         <div class="col">
 
                             <h2 class="ptm">Definition of <em>@Model.Word.Word&nbsp;</em></h2>
                             <p class="entryNumbers"></p>
+                        </div>
+
+                        <div class="col-auto">
+
+                            <button type="button" id="toggle-english-equivalents" class="btn btn-sm btn-outline-secondary english-toggle-button" aria-pressed="false">
+                                In English
+                            </button>
+
                         </div>
 
                     </div>
@@ -190,16 +198,31 @@
                                                     <strong class="mw_t_bc">: </strong>@definition.Content<strong
                                                         class="mw_t_bc">:</strong>
 
-                                                    @if (definition.Examples?.Any() == true)
+                                                    @if (!string.IsNullOrWhiteSpace(definition.EnglishTranslation))
                                                     {
-
-                                                        <span class="ex-sent t no-aq sents">
-                                                            @definition.Examples.First().Content
+                                                        <span class="english-equivalent english-hidden">
+                                                            @definition.EnglishTranslation
                                                         </span>
-
                                                     }
 
                                                 </span>
+
+                                                @if (definition.Examples?.Any() == true)
+                                                {
+                                                    foreach (var example in definition.Examples)
+                                                    {
+                                                        <span class="ex-sent t no-aq sents inline-example">
+                                                            <strong class="example-prefix">f.a.:</strong>
+                                                            <span class="example-content">@example.Content</span>
+                                                            @if (!string.IsNullOrWhiteSpace(example.EnglishTranslation))
+                                                            {
+                                                                <span class="english-equivalent english-hidden">
+                                                                    @example.EnglishTranslation
+                                                                </span>
+                                                            }
+                                                        </span>
+                                                    }
+                                                }
 
                                             </span>
                                         </p>
@@ -209,27 +232,6 @@
                                 </div>
                             }
                         }
-
-                    </div>
-
-                    <div id="first-known-anchor" class="row widget">
-
-                        <h2 class="ptm">English Translation</h2>
-
-                        <p class="ety-sl">
-                            @if (Model.Word.Definitions?.Any() == true)
-                            {
-                                @for (int i = 0; i < Model.Word.Definitions.Count; i++)
-                                {
-                                    var definition = Model.Word.Definitions[i];
-                                    @definition.EnglishTranslation
-                                    @if (i < Model.Word.Definitions.Count - 1)
-                                    {
-                                        <span>,&nbsp;</span>
-                                    }
-                                }
-                            }
-                        </p>
 
                     </div>
 
@@ -254,67 +256,6 @@
                     *@
 
                 </div>
-
-                @{
-                    // Check if there are any examples in the word definitions (similar to Handlebars {{#if word.examples}})
-                    var hasExamples = Model.Word.Definitions?.Any(d => d.Examples?.Any() == true) == true;
-                }
-                @if (hasExamples)
-                {
-                    <div id="dictionary-entry-1">
-
-                        <div class="row vg-header">
-
-                            <div class="col">
-
-                                <h2 class="ptm">Example of <em>@Model.Word.Word&nbsp;</em></h2>
-                                <p class="entryNumbers"></p>
-
-                            </div>
-
-                        </div>
-
-                        <div class="vg">
-
-                            <div class="sb has-num">
-
-                                <div class="sb-0">
-
-                                    <p class="sense has-num-only">
-
-                                        <span class="sn sense-1"><span class="num">a.</span></span>
-
-                                        <span class="dt ">
-
-                                            <span class="dtText">
-                                                <strong class="mw_t_bc"> </strong>
-                                                @{
-                                                    var firstExampleDefinition = Model.Word.Definitions?.FirstOrDefault(d => d.Examples?.Any() == true);
-                                                    var firstExample = firstExampleDefinition?.Examples?.FirstOrDefault();
-                                                }
-                                                @if (firstExample != null)
-                                                {
-                                                    @firstExample.Content
-                                                }
-                                                else
-                                                {
-                                                    <text>hard to do, make, or carry out</text>
-                                                }
-
-                                            </span>
-
-                                        </span>
-                                    </p>
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-                }
-
                 @if (!string.IsNullOrEmpty(Model.Word.Morphology?.ToString()))
                 {
 
@@ -413,6 +354,75 @@
         </div>
     </div>
 </section>
+
+<style>
+    .english-toggle-button {
+        min-width: 8.5rem;
+    }
+
+    .english-equivalent {
+        display: inline-block;
+        margin-left: 0.45rem;
+        color: #6c757d;
+        font-size: 0.88em;
+        font-style: italic;
+    }
+
+    .english-hidden {
+        display: none;
+    }
+
+    .english-equivalent::before {
+        content: "(";
+    }
+
+    .english-equivalent::after {
+        content: ")";
+    }
+
+    .inline-example {
+        display: block;
+        margin-top: 0.5rem;
+    }
+
+    .example-prefix {
+        display: inline-block;
+        margin-right: 0.35rem;
+        color: #5f4f1f;
+        font-size: 0.86em;
+        letter-spacing: 0.02em;
+    }
+
+    .example-content {
+        color: #2f2f2f;
+    }
+</style>
+
+<script>
+    (function () {
+        var toggleButton = document.getElementById('toggle-english-equivalents');
+        if (!toggleButton) {
+            return;
+        }
+
+        toggleButton.addEventListener('click', function () {
+            var showingEnglish = toggleButton.getAttribute('aria-pressed') === 'true';
+            var nextState = !showingEnglish;
+            var englishEquivalents = document.querySelectorAll('.english-equivalent');
+
+            englishEquivalents.forEach(function (element) {
+                if (nextState) {
+                    element.classList.remove('english-hidden');
+                } else {
+                    element.classList.add('english-hidden');
+                }
+            });
+
+            toggleButton.setAttribute('aria-pressed', String(nextState));
+            toggleButton.textContent = nextState ? 'Hide English' : 'In English';
+        });
+    })();
+</script>
 
 <br>
 
