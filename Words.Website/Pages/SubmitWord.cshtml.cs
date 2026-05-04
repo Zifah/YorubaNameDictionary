@@ -14,13 +14,14 @@ namespace Words.Website.Pages
     public class SubmitWordModel(
         IStringLocalizer<Messages> localizer,
         ILanguageService languageService,
-        ApiService apiService) : BasePageModel(localizer, languageService)
+        ApiService apiService,
+        ILogger<SubmitWordModel> logger) : BasePageModel(localizer, languageService)
     {
         private readonly ApiService _apiService = apiService;
 
         [BindProperty(SupportsGet = true)]
         [FromQuery(Name = "missing")]
-        public string MissingWord { get; set; } = string.Empty;
+        public string? MissingWord { get; set; }
 
         public GeoLocationDto[] GeoLocations { get; private set; } = [];
 
@@ -60,7 +61,7 @@ namespace Words.Website.Pages
                     dto.Definitions.Add(new DefinitionDto(suggestedMeaning, null, [], DateTime.UtcNow));
                 }
 
-                foreach (var geo in suggestedGeoLocation)
+                foreach (var geo in suggestedGeoLocation ?? [])
                 {
                     var parts = geo.Split('.', 2);
                     var place = parts.Length > 1 ? parts[1] : geo;
@@ -72,10 +73,11 @@ namespace Words.Website.Pages
                 SuccessMessage = "Thank you! Your word has been submitted for review.";
                 return RedirectToPage(new { missing = string.Empty });
             }
-            catch
+            catch(Exception ex)
             {
-                GeoLocations = await _apiService.GetGeoLocations() ?? [];
                 ErrorMessage = "Something went wrong submitting your word. Please try again.";
+                logger.LogError(ex, ErrorMessage);
+                GeoLocations = await _apiService.GetGeoLocations() ?? [];
                 return Page();
             }
         }
