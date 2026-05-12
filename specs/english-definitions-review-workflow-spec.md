@@ -76,6 +76,7 @@ Notes:
 - The response includes definitions irrespective of `NeedsReview` (`null`, `true`, `false`).
 - If a word is unknown, return an empty array for that word.
 - Word matching/casing/normalization should follow existing API word lookup behavior.
+- This endpoint should follow the same query-driven lookup pattern used by the existing `latest-meaning` endpoint in `Api.Controllers.Names.EtymologyController`.
 
 ### 4.2 POST `v1/words/definitions/in-english`
 
