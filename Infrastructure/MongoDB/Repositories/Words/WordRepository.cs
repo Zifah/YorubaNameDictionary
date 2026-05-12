@@ -14,6 +14,7 @@ namespace Infrastructure.MongoDB.Repositories.Words
     public class WordRepository(IMongoDatabaseFactory databaseFactory, ITenantProvider tenantProvider, IEventPubService eventPubService) : DictionaryEntryRepository<WordEntry>(CollectionName, databaseFactory, tenantProvider, eventPubService), IWordEntryRepository
     {
         private const string CollectionName = "Words";
+        private const string YorubaDefinitionPlaceholder = "{{YORUBA-DEFINITION-PLACEHOLDER}}";
 
         public async Task<int> CountByStateAsync(State state)
         {
@@ -115,6 +116,123 @@ namespace Infrastructure.MongoDB.Repositories.Words
             & Builders<WordEntry>.Filter.Eq(ne => ne.State, state);
             var result = await RepoCollection.Find(filter).ToListAsync();
             return [.. result];
+        }
+
+        public async Task<IDictionary<string, string[]>> GetEnglishDefinitionsOf(IEnumerable<string> words)
+        {
+            var requestedWords = words
+                .Where(w => !string.IsNullOrWhiteSpace(w))
+                .Select(w => w.Trim())
+                .Distinct(StringComparer.CurrentCultureIgnoreCase)
+                .ToArray();
+
+            if (requestedWords.Length == 0)
+            {
+                return new Dictionary<string, string[]>();
+            }
+
+            var matchingWords = await RepoCollection
+                .Find(Builders<WordEntry>.Filter.In(w => w.Title, requestedWords), SetCollationSecondary<FindOptions>(new FindOptions()))
+                .Project(w => new
+                {
+                    w.Title,
+                    w.Definitions
+                })
+                .ToListAsync();
+
+            var result = requestedWords.ToDictionary(
+                keySelector: word => word,
+                elementSelector: _ => Array.Empty<string>());
+
+            foreach (var matchingWord in matchingWords)
+            {
+                var englishDefinitions = matchingWord.Definitions
+                    .Where(d => !string.IsNullOrWhiteSpace(d.EnglishTranslation))
+                    .Select(d => d.EnglishTranslation!.Trim())
+                    .Distinct(StringComparer.CurrentCultureIgnoreCase)
+                    .ToArray();
+
+                result[matchingWord.Title] = englishDefinitions;
+            }
+
+            return result;
+        }
+
+        public async Task<IDictionary<string, string>> AddEnglishDefinitionsAsync(IDictionary<string, string> definitionsByWord)
+        {
+            var requests = definitionsByWord
+                .Where(kvp => !string.IsNullOrWhiteSpace(kvp.Key) && !string.IsNullOrWhiteSpace(kvp.Value))
+                .GroupBy(kvp => kvp.Key.Trim(), StringComparer.CurrentCultureIgnoreCase)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Last().Value.Trim(),
+                    StringComparer.CurrentCultureIgnoreCase);
+
+            var statuses = new Dictionary<string, string>();
+
+            if (requests.Count == 0)
+            {
+                return statuses;
+            }
+
+            var requestedWords = requests.Keys.ToArray();
+            var existingWords = await RepoCollection
+                .Find(Builders<WordEntry>.Filter.In(w => w.Title, requestedWords), SetCollationSecondary<FindOptions>(new FindOptions()))
+                .ToListAsync();
+
+            var existingByTitle = existingWords.ToDictionary(w => w.Title, StringComparer.CurrentCultureIgnoreCase);
+
+            foreach (var request in requests)
+            {
+                if (!existingByTitle.TryGetValue(request.Key, out var wordEntry))
+                {
+                    await CreateWord(request);
+                    statuses[request.Key] = "created";
+                    continue;
+                }
+
+                var definitionExists = wordEntry.Definitions.Any(d =>
+                    !string.IsNullOrWhiteSpace(d.EnglishTranslation)
+                    && string.Equals(d.EnglishTranslation.Trim(), request.Value, StringComparison.CurrentCultureIgnoreCase));
+
+                if (definitionExists)
+                {
+                    statuses[request.Key] = "skipped-duplicate";
+                    continue;
+                }
+
+                wordEntry.Definitions.Add(new Definition
+                {
+                    Content = YorubaDefinitionPlaceholder,
+                    EnglishTranslation = request.Value,
+                    NeedsReview = true
+                });
+
+                await RepoCollection.ReplaceOneAsync(
+                    Builders<WordEntry>.Filter.Eq(w => w.Id, wordEntry.Id),
+                    wordEntry);
+
+                statuses[request.Key] = "created";
+            }
+
+            return statuses;
+        }
+
+        private async Task CreateWord(KeyValuePair<string, string> request)
+        {
+            var newWordEntry = new WordEntry
+            {
+                Title = request.Key,
+                State = State.NEW,
+                Definitions = [new Definition
+                {
+                    Content = YorubaDefinitionPlaceholder,
+                    EnglishTranslation = request.Value,
+                    NeedsReview = true
+                }]
+            };
+
+            await RepoCollection.InsertOneAsync(newWordEntry);
         }
 
         // TODO YDict: Implement the custom FindBy methods (which are commented out in the interface) here (based on definitions).

@@ -16,7 +16,18 @@ namespace Application.Services.Words
         DictionaryEntryService<WordEntry>(wordEntryRepository, eventPubService, tenantProvider, logger)
     {
         private readonly IEventPubService _eventPubService = eventPubService;
+        private readonly IWordEntryRepository _wordEntryRepository = wordEntryRepository;
         private readonly string _currentTenant = tenantProvider.GetCurrentTenant();
+
+        public Task<IDictionary<string, string[]>> GetEnglishDefinitionsOf(IEnumerable<string> words)
+        {
+            return _wordEntryRepository.GetEnglishDefinitionsOf(words);
+        }
+
+        public Task<IDictionary<string, string>> AddEnglishDefinitionsAsync(IDictionary<string, string> definitionsByWord)
+        {
+            return _wordEntryRepository.AddEnglishDefinitionsAsync(definitionsByWord);
+        }
 
         public async Task<List<WordEntry>> BulkUpdateWords(List<WordEntry> wordEntries)
         {

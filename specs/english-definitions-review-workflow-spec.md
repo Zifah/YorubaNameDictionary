@@ -120,7 +120,7 @@ Suggested response shape:
 ## 5. Words Website Requirements
 
 Display rule update:
-- Only definitions where `NeedsReview = false` are shown on the website.
+- Only definitions where `NeedsReview != true` are shown on the website.
 
 Handling legacy records:
 - Definitions with `NeedsReview = null` are legacy values.
