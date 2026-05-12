@@ -2,6 +2,7 @@ using Application.Services.Words;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
+using Words.Core.Dto.Response;
 
 namespace Api.Controllers.Words
 {
@@ -10,6 +11,10 @@ namespace Api.Controllers.Words
     [Authorize(Policy = "AdminAndLexicographers")]
     public class DefinitionsController(WordEntryService entryService) : ControllerBase
     {
+        private const int DefaultPage = 1;
+        private const int DefaultCount = 50;
+        private const int MaxCount = 500;
+
         /// <summary>
         /// Returns English definitions for each requested word, irrespective of review status.
         /// </summary>
@@ -50,6 +55,26 @@ namespace Api.Controllers.Words
             var response = statuses.ToDictionary(kvp => kvp.Key, kvp => (object)new { status = kvp.Value });
 
             return Ok(response);
+        }
+
+        /// <summary>
+        /// Lists words that contain at least one definition needing review.
+        /// </summary>
+        [HttpGet("needs-review")]
+        [ProducesResponseType(typeof(List<WordDefinitionNeedsReviewDto>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public async Task<IActionResult> GetWordsWithDefinitionsNeedingReview([FromQuery] int? page, [FromQuery] int? count)
+        {
+            var pageNumber = page ?? DefaultPage;
+            var pageSize = Math.Min(count ?? DefaultCount, MaxCount);
+
+            if (pageNumber < 1 || pageSize < 1)
+            {
+                return BadRequest("page and count must be greater than 0.");
+            }
+
+            var result = await entryService.GetWordsWithDefinitionsNeedingReviewAsync(pageNumber, pageSize);
+            return Ok(result);
         }
     }
 }

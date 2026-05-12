@@ -8,13 +8,30 @@ using YorubaOrganization.Core.Enums;
 using YorubaOrganization.Core.Utilities;
 using MongoDB.Bson;
 using Words.Core.Repositories;
+using Words.Core.Dto.Response;
 
 namespace Infrastructure.MongoDB.Repositories.Words
 {
-    public class WordRepository(IMongoDatabaseFactory databaseFactory, ITenantProvider tenantProvider, IEventPubService eventPubService) : DictionaryEntryRepository<WordEntry>(CollectionName, databaseFactory, tenantProvider, eventPubService), IWordEntryRepository
+    public class WordRepository : DictionaryEntryRepository<WordEntry>, IWordEntryRepository
     {
         private const string CollectionName = "Words";
         private const string YorubaDefinitionPlaceholder = "{{YORUBA-DEFINITION-PLACEHOLDER}}";
+        private const string DefinitionsNeedsReviewStateIndexName = "idx_words_definitions_needsreview_state";
+        private static readonly object IndexCreationLock = new();
+        private static bool _DoesWordDefinitionsNeedingReviewIndexExist;
+
+        public WordRepository(IMongoDatabaseFactory databaseFactory, ITenantProvider tenantProvider, IEventPubService eventPubService)
+            : base(CollectionName, databaseFactory, tenantProvider, eventPubService)
+        {
+            EnsureIndexesCreated();
+        }
+
+        private sealed class UnwoundWordDefinition
+        {
+            public string Title { get; set; } = string.Empty;
+            public State State { get; set; }
+            public Definition Definitions { get; set; } = null!;
+        }
 
         public async Task<int> CountByStateAsync(State state)
         {
@@ -218,6 +235,31 @@ namespace Infrastructure.MongoDB.Repositories.Words
             return statuses;
         }
 
+        public async Task<List<WordDefinitionNeedsReviewDto>> GetWordsWithDefinitionsNeedingReviewAsync(int page, int count)
+        {
+            page = Math.Max(1, page);
+            count = Math.Max(1, count);
+            var skip = (page - 1) * count;
+
+            var aggregated = await RepoCollection
+                .Aggregate(SetCollationSecondary<AggregateOptions>(new AggregateOptions()))
+                .Unwind<WordEntry, UnwoundWordDefinition>(w => w.Definitions)
+                .Match(x => x.Definitions.NeedsReview == true)
+                .Group(
+                    x => new { x.Title, x.State },
+                    g => new WordDefinitionNeedsReviewDto(
+                        g.Key.State,
+                        g.Key.Title,
+                        g.Max(x => x.Definitions.CreatedAt),
+                        g.Count()))
+                .SortByDescending(x => x.LastDefinitionAddedAt)
+                .Skip(skip)
+                .Limit(count)
+                .ToListAsync();
+
+            return aggregated;
+        }
+
         private async Task CreateWord(KeyValuePair<string, string> request)
         {
             var newWordEntry = new WordEntry
@@ -233,6 +275,34 @@ namespace Infrastructure.MongoDB.Repositories.Words
             };
 
             await RepoCollection.InsertOneAsync(newWordEntry);
+        }
+
+        private bool EnsureIndexesCreated()
+        {
+            if (_DoesWordDefinitionsNeedingReviewIndexExist)
+            {
+                return true;
+            }
+
+            lock (IndexCreationLock)
+            {
+                if (_DoesWordDefinitionsNeedingReviewIndexExist)
+                {
+                    return true;
+                }
+
+                var indexKeys = Builders<WordEntry>.IndexKeys
+                    .Ascending("Definitions.NeedsReview")
+                    .Ascending(x => x.State);
+
+                var indexModel = new CreateIndexModel<WordEntry>(
+                    indexKeys,
+                    new CreateIndexOptions { Name = DefinitionsNeedsReviewStateIndexName });
+
+                RepoCollection.Indexes.CreateOne(indexModel);
+                _DoesWordDefinitionsNeedingReviewIndexExist = true;
+                return true;
+            }
         }
 
         // TODO YDict: Implement the custom FindBy methods (which are commented out in the interface) here (based on definitions).
