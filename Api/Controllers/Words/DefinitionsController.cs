@@ -51,7 +51,8 @@ namespace Api.Controllers.Words
                 return BadRequest("Payload must be a dictionary of word to English definition.");
             }
 
-            var statuses = await entryService.AddEnglishDefinitionsAsync(payload);
+            var currentUser = User?.Identity?.Name;
+            var statuses = await entryService.AddEnglishDefinitionsAsync(payload, currentUser);
             var response = statuses.ToDictionary(kvp => kvp.Key, kvp => (object)new { status = kvp.Value });
 
             return Ok(response);

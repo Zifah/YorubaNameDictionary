@@ -126,7 +126,7 @@ namespace Infrastructure.MongoDB.Repositories.Words
         }
 
         // TODO YDict: Test that this definition content search works as expected.
-        public async Task<HashSet<WordEntry>> FindEntryByDefinitionsContentContainingAndState(string title, State state)
+        public async Task<HashSet<WordEntry>> FindEntryByDefinitionsContentContainingAndStateAsync(string title, State state)
         {
             var filter = Builders<WordEntry>.Filter.ElemMatch(ne => ne.Definitions,
             Builders<Definition>.Filter.Regex(d => d.Content, new BsonRegularExpression(title.ReplaceYorubaVowelsWithPattern(), "i")))
@@ -135,7 +135,7 @@ namespace Infrastructure.MongoDB.Repositories.Words
             return [.. result];
         }
 
-        public async Task<IDictionary<string, string[]>> GetEnglishDefinitionsOf(IEnumerable<string> words)
+        public async Task<IDictionary<string, string[]>> GetEnglishDefinitionsOfAsync(IEnumerable<string> words)
         {
             var requestedWords = words
                 .Where(w => !string.IsNullOrWhiteSpace(w))
@@ -175,7 +175,7 @@ namespace Infrastructure.MongoDB.Repositories.Words
             return result;
         }
 
-        public async Task<IDictionary<string, string>> AddEnglishDefinitionsAsync(IDictionary<string, string> definitionsByWord)
+        public async Task<IDictionary<string, string>> AddEnglishDefinitionsAsync(IDictionary<string, string> definitionsByWord, string? currentUser = null)
         {
             var requests = definitionsByWord
                 .Where(kvp => !string.IsNullOrWhiteSpace(kvp.Key) && !string.IsNullOrWhiteSpace(kvp.Value))
@@ -203,7 +203,7 @@ namespace Infrastructure.MongoDB.Repositories.Words
             {
                 if (!existingByTitle.TryGetValue(request.Key, out var wordEntry))
                 {
-                    await CreateWord(request);
+                    await CreateWord(request, currentUser);
                     statuses[request.Key] = "created";
                     continue;
                 }
@@ -224,6 +224,11 @@ namespace Infrastructure.MongoDB.Repositories.Words
                     EnglishTranslation = request.Value,
                     NeedsReview = true
                 });
+
+                if (!string.IsNullOrWhiteSpace(currentUser))
+                {
+                    wordEntry.UpdatedBy = currentUser;
+                }
 
                 await RepoCollection.ReplaceOneAsync(
                     Builders<WordEntry>.Filter.Eq(w => w.Id, wordEntry.Id),
@@ -260,7 +265,7 @@ namespace Infrastructure.MongoDB.Repositories.Words
             return aggregated;
         }
 
-        private async Task CreateWord(KeyValuePair<string, string> request)
+        private async Task CreateWord(KeyValuePair<string, string> request, string? currentUser)
         {
             var newWordEntry = new WordEntry
             {
@@ -274,7 +279,13 @@ namespace Infrastructure.MongoDB.Repositories.Words
                 }]
             };
 
-            await RepoCollection.InsertOneAsync(newWordEntry);
+            if (!string.IsNullOrWhiteSpace(currentUser))
+            {
+                newWordEntry.CreatedBy = currentUser;
+                newWordEntry.UpdatedBy = currentUser;
+            }
+
+            await Create(newWordEntry);
         }
 
         private bool EnsureIndexesCreated()

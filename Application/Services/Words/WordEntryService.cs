@@ -22,12 +22,12 @@ namespace Application.Services.Words
 
         public Task<IDictionary<string, string[]>> GetEnglishDefinitionsOf(IEnumerable<string> words)
         {
-            return _wordEntryRepository.GetEnglishDefinitionsOf(words);
+            return _wordEntryRepository.GetEnglishDefinitionsOfAsync(words);
         }
 
-        public Task<IDictionary<string, string>> AddEnglishDefinitionsAsync(IDictionary<string, string> definitionsByWord)
+        public Task<IDictionary<string, string>> AddEnglishDefinitionsAsync(IDictionary<string, string> definitionsByWord, string? currentUser = null)
         {
-            return _wordEntryRepository.AddEnglishDefinitionsAsync(definitionsByWord);
+            return _wordEntryRepository.AddEnglishDefinitionsAsync(definitionsByWord, currentUser);
         }
 
         public Task<List<WordDefinitionNeedsReviewDto>> GetWordsWithDefinitionsNeedingReviewAsync(int page, int count)
