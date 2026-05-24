@@ -11,6 +11,7 @@ namespace Application.Services.Names
         int DistinctParts,
         int DistinctPartMeaningPairs,
         int CreatedWords,
+        int DefinitionsAdded,
         int SkippedDuplicates,
         int PartiallyCreated,
         int NoValidDefinitions,
@@ -59,8 +60,9 @@ namespace Application.Services.Names
                 : await _wordEntryService.AddEnglishDefinitionsAsync(groupedByPart, currentUser);
 
             var createdWords = statusByWord.Values.Count(status => status == "created");
+            var definitionsAdded = statusByWord.Values.Count(status => status == "all-definitions-added");
             var skippedDuplicates = statusByWord.Values.Count(status => status == "skipped-duplicate");
-            var partiallyCreated = statusByWord.Values.Count(status => status == "partially-created");
+            var partiallyCreated = statusByWord.Values.Count(status => status == "some-definitions-added");
             var noValidDefinitions = statusByWord.Values.Count(status => status == "no-valid-definition");
 
             foreach (var sampledWord in statusByWord
@@ -82,6 +84,7 @@ namespace Application.Services.Names
                 groupedByPart.Count,
                 groupedByPart.Values.Sum(values => values.Length),
                 createdWords,
+                definitionsAdded,
                 skippedDuplicates,
                 partiallyCreated,
                 noValidDefinitions,

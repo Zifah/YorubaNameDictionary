@@ -16,6 +16,11 @@ namespace Infrastructure.MongoDB.Repositories.Words
     {
         private const string CollectionName = "Words";
         private const string YorubaDefinitionPlaceholder = "{{YORUBA-DEFINITION-PLACEHOLDER}}";
+        private const string StatusCreated = "created";
+        private const string StatusAllDefinitionsAdded = "all-definitions-added";
+        private const string StatusSomeDefinitionsAdded = "some-definitions-added";
+        private const string StatusSkippedDuplicate = "skipped-duplicate";
+        private const string StatusNoValidDefinition = "no-valid-definition";
         private const string DefinitionsNeedsReviewStateIndexName = "idx_words_definitions_needsreview_state";
         private static readonly object IndexCreationLock = new();
         private static bool _DoesWordDefinitionsNeedingReviewIndexExist;
@@ -244,14 +249,14 @@ namespace Infrastructure.MongoDB.Repositories.Words
                 var meanings = request.Value;
                 if (meanings.Length == 0)
                 {
-                    statuses[request.Key] = "no-valid-definition";
+                    statuses[request.Key] = StatusNoValidDefinition;
                     continue;
                 }
 
                 if (!existingByTitle.TryGetValue(request.Key, out var wordEntry))
                 {
                     await CreateWord(request.Key, meanings, currentUser);
-                    statuses[request.Key] = "created";
+                    statuses[request.Key] = StatusCreated;
                     continue;
                 }
 
@@ -284,7 +289,7 @@ namespace Infrastructure.MongoDB.Repositories.Words
 
                 if (createdCount == 0)
                 {
-                    statuses[request.Key] = "skipped-duplicate";
+                    statuses[request.Key] = StatusSkippedDuplicate;
                     continue;
                 }
 
@@ -297,7 +302,7 @@ namespace Infrastructure.MongoDB.Repositories.Words
                     Builders<WordEntry>.Filter.Eq(w => w.Id, wordEntry.Id),
                     wordEntry);
 
-                statuses[request.Key] = skippedCount == 0 ? "created" : "partially-created";
+                statuses[request.Key] = skippedCount == 0 ? StatusAllDefinitionsAdded : StatusSomeDefinitionsAdded;
             }
 
             return statuses;
