@@ -135,6 +135,29 @@ namespace Infrastructure.MongoDB.Repositories.Words
             return [.. result];
         }
 
+        public async Task<List<WordEntry>> GetPublishedWithEtymologyPageAsync(int page, int count)
+        {
+            page = Math.Max(1, page);
+            count = Math.Max(1, count);
+            var skip = (page - 1) * count;
+
+            var filter = Builders<WordEntry>.Filter.Eq(ne => ne.State, State.PUBLISHED);
+
+            return await RepoCollection
+                .Find(filter)
+                .SortBy(ne => ne.Id)
+                .Skip(skip)
+                .Limit(count)
+                .Project(ne => new WordEntry
+                {
+                    Id = ne.Id,
+                    Title = ne.Title,
+                    Etymology = ne.Etymology,
+                    Definitions = ne.Definitions
+                })
+                .ToListAsync();
+        }
+
         public async Task<IDictionary<string, string[]>> GetEnglishDefinitionsOfAsync(IEnumerable<string> words)
         {
             var requestedWords = words

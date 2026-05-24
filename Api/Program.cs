@@ -135,6 +135,7 @@ services
 services.Configure<WordsConfig>(configuration.GetSection("Words"));
 services.Configure<WordsApiConfig>(configuration.GetSection("WordsApi"));
 services.Configure<NameEtymologyDefinitionsSyncConfig>(configuration.GetSection("NameEtymologyDefinitionsSync"));
+services.Configure<WordEtymologyDefinitionsSyncConfig>(configuration.GetSection("WordEtymologyDefinitionsSync"));
 services.AddHttpClient("WordsApiClient", (serviceProvider, client) =>
 {
     var wordsApiConfig = serviceProvider.GetRequiredService<IOptions<WordsApiConfig>>().Value;
@@ -152,6 +153,8 @@ services
     .AddScoped<WordFeedbackService>()
     .AddScoped<WordEntryService>()
     .AddScoped<WordSearchService>()
+    .AddScoped<WordEtymologyDefinitionsSyncService>()
+    .AddScoped<WordEtymologyDefinitionsSyncJob>()
     .AddScoped<NameEtymologyDefinitionsSyncService>()
     .AddScoped<NameEtymologyDefinitionsSyncJob>();
 

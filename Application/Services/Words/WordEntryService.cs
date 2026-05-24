@@ -26,6 +26,11 @@ namespace Application.Services.Words
             return _wordEntryRepository.GetEnglishDefinitionsOfAsync(words);
         }
 
+        public Task<List<WordEntry>> GetPublishedWithEtymologyPageAsync(int page, int count)
+        {
+            return _wordEntryRepository.GetPublishedWithEtymologyPageAsync(page, count);
+        }
+
         public Task<IDictionary<string, string>> AddEnglishDefinitionsAsync(IDictionary<string, string> definitionsByWord, string? currentUser = null)
         {
             return _wordEntryRepository.AddEnglishDefinitionsAsync(definitionsByWord, currentUser);
