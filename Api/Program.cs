@@ -23,6 +23,7 @@ using Application.Services.MultiLanguage;
 using YorubaOrganization.Application.Services;
 using Api.Utilities;
 using Api.Configuration;
+using Api.Jobs;
 using Application.Services.Names;
 using Application.Services.Words;
 using Core.Entities;
@@ -133,6 +134,7 @@ services
 // Words
 services.Configure<WordsConfig>(configuration.GetSection("Words"));
 services.Configure<WordsApiConfig>(configuration.GetSection("WordsApi"));
+services.Configure<NameEtymologyDefinitionsSyncConfig>(configuration.GetSection("NameEtymologyDefinitionsSync"));
 services.AddHttpClient("WordsApiClient", (serviceProvider, client) =>
 {
     var wordsApiConfig = serviceProvider.GetRequiredService<IOptions<WordsApiConfig>>().Value;
@@ -149,7 +151,9 @@ services
     .AddScoped<EntryFeedbackService<WordEntry>>()
     .AddScoped<WordFeedbackService>()
     .AddScoped<WordEntryService>()
-    .AddScoped<WordSearchService>();
+    .AddScoped<WordSearchService>()
+    .AddScoped<NameEtymologyDefinitionsSyncService>()
+    .AddScoped<NameEtymologyDefinitionsSyncJob>();
 
 services
     .AddScoped<IRecentIndexesCache, RedisRecentIndexesCache>()
