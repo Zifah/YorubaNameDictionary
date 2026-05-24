@@ -93,7 +93,7 @@ namespace Api.Jobs
                     }
 
                     _logger.LogInformation(
-                        "NameEtymologyDefinitionsSync.PageCompleted runId={RunId} currentPage={CurrentPage} namesRead={NamesRead} etymologyRowsRead={EtymologyRowsRead} distinctParts={DistinctParts} distinctPartMeaningPairs={DistinctPartMeaningPairs} wordsCreated={WordsCreated} duplicatesSkipped={DuplicatesSkipped} partiallyCreated={PartiallyCreated} noValidDefinitions={NoValidDefinitions} pageDurationMs={PageDurationMs}",
+                        "NameEtymologyDefinitionsSync.PageCompleted runId={RunId} currentPage={CurrentPage} namesRead={NamesRead} etymologyRowsRead={EtymologyRowsRead} distinctParts={DistinctParts} distinctPartMeaningPairs={DistinctPartMeaningPairs} wordsCreated={WordsCreated} definitionsAdded={DefinitionsAdded} duplicatesSkipped={DuplicatesSkipped} partiallyCreated={PartiallyCreated} noValidDefinitions={NoValidDefinitions} pageDurationMs={PageDurationMs}",
                         runId,
                         pageResult.Page,
                         pageResult.NamesRead,
@@ -101,6 +101,7 @@ namespace Api.Jobs
                         pageResult.DistinctParts,
                         pageResult.DistinctPartMeaningPairs,
                         pageResult.CreatedWords,
+                        pageResult.DefinitionsAdded,
                         pageResult.SkippedDuplicates,
                         pageResult.PartiallyCreated,
                         pageResult.NoValidDefinitions,
